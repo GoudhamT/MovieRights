@@ -81,4 +81,12 @@ contract MovieRights {
     function getOwner() external view returns (address) {
         return s_owner;
     }
+
+    function getAuction() external view returns (AuctionDetails memory) {
+        return s_auctionDetails;
+    }
+
+    function getAuctionName() external view returns (string memory) {
+        return s_auctionDetails.movieName;
+    }
 }

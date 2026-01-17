@@ -23,13 +23,9 @@
 
 pragma solidity 0.8.19;
 
-contract MovieRights {
-    /**
-     * @author: Goudham
-     * @dev : contract uses chainlink data feed, VRF and NFT
-     * @notice: contract created for movie rights auction
-     */
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
+contract MovieRights {
     /* type declarations */
     struct AuctionDetails {
         string movieName;

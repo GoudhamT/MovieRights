@@ -10,7 +10,7 @@ contract MovieRightsTest is Test {
 
     function setUp() public {
         vm.startBroadcast(USER);
-        movieRights = new MovieRights();
+        movieRights = new MovieRights(address(0));
         vm.stopBroadcast();
     }
 

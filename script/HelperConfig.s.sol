@@ -9,7 +9,7 @@ abstract contract ConfigConstants {
     uint256 public constant MAINNET_CHAIN_ID = 1;
     uint256 public constant LOCAL_ID = 31337;
     uint8 public constant MOCK_DECIMALS = 8;
-    int256 public constant MOCK_ANSWER = 2000e10;
+    int256 public constant MOCK_ANSWER = 2000e8;
 }
 
 contract HelperConfig is Script, ConfigConstants {

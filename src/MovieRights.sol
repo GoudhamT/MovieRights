@@ -74,12 +74,12 @@ contract MovieRights {
 
     function _getEthPriceInUSD() internal view returns (uint256) {
         uint256 minPrice = (s_auctionDetails.minPriceInUSD) * 1e18;
-        uint256 EthInUSD = _getPrice();
+        uint256 EthInUSD = getPrice();
         uint256 calculatedETH = (minPrice * 1e8) / EthInUSD;
         return calculatedETH;
     }
 
-    function _getPrice() internal view returns (uint256) {
+    function getPrice() public view returns (uint256) {
         (, int256 price, , , ) = s_priceFeed.latestRoundData();
         return uint256(price);
     }

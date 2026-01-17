@@ -28,6 +28,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 contract MovieRights {
     /*Errors */
     error MovieRights__NotEnoughMoneyforAuction(uint256 _money);
+    error MovieRights__InvalidRightsAmount(uint256);
     /* type declarations */
     enum AuctionStatus {
         OPEN,
@@ -79,7 +80,7 @@ contract MovieRights {
         return calculatedETH;
     }
 
-    function getPrice() public view returns (uint256) {
+    function getPrice() internal view returns (uint256) {
         (, int256 price, , , ) = s_priceFeed.latestRoundData();
         return uint256(price);
     }
@@ -91,6 +92,9 @@ contract MovieRights {
         uint256 _auctionDuration,
         uint256 _rightsDuration
     ) public {
+        if (_minPrice <= 0) {
+            revert MovieRights__InvalidRightsAmount(_minPrice);
+        }
         AuctionDetails storage auction = s_auctionDetails;
         auction.movieName = _name;
         auction.minPriceInUSD = _minPrice;
@@ -138,5 +142,9 @@ contract MovieRights {
 
     function getHighestAmount() public view returns (uint256) {
         return s_auctionDetails.highestBidAmount;
+    }
+
+    function getAuctionStatus() public view returns (AuctionStatus) {
+        return s_auctionDetails.auctionStatus;
     }
 }

@@ -29,6 +29,7 @@ contract MovieRights {
     /*Errors */
     error MovieRights__NotEnoughMoneyforAuction(uint256 _money);
     error MovieRights__InvalidRightsAmount(uint256);
+    error MovieRights__AuctionPricecannotBeZero();
     /* type declarations */
     enum AuctionStatus {
         OPEN,
@@ -73,7 +74,7 @@ contract MovieRights {
         _;
     }
 
-    function _getEthPriceInUSD() internal view returns (uint256) {
+    function _getMinEthRequired() internal view returns (uint256) {
         uint256 minPrice = (s_auctionDetails.minPriceInUSD) * 1e18;
         uint256 EthInUSD = getPrice();
         uint256 calculatedETH = (minPrice * 1e8) / EthInUSD;
@@ -95,6 +96,8 @@ contract MovieRights {
         if (_minPrice <= 0) {
             revert MovieRights__InvalidRightsAmount(_minPrice);
         }
+        require(_auctionDuration > 0, "Invalid auction duration");
+        require(_rightsDuration > 0, "Invalid rights duration");
         AuctionDetails storage auction = s_auctionDetails;
         auction.movieName = _name;
         auction.minPriceInUSD = _minPrice;
@@ -106,12 +109,16 @@ contract MovieRights {
     }
 
     function enterBid() public payable {
+        if (s_auctionDetails.minPriceInUSD <= 0) {
+            revert MovieRights__AuctionPricecannotBeZero();
+        }
+
         require(
             s_auctionDetails.auctionStatus == AuctionStatus.OPEN,
             "Auction is not Open"
         );
 
-        if (msg.value < _getEthPriceInUSD()) {
+        if (msg.value < _getMinEthRequired()) {
             revert MovieRights__NotEnoughMoneyforAuction(msg.value);
         }
         /*Push Bidder */

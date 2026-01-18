@@ -10,7 +10,7 @@ contract MovieRightsTest is Test {
     DeployMovieRights deployer;
     MovieRights movieRights;
     address USER = makeAddr("user");
-
+    uint256 constant USER_BALANCE = 1000 ether;
     event MovieRights__auctionCreated(
         string indexed movieName,
         uint256 minPrice
@@ -39,6 +39,23 @@ contract MovieRightsTest is Test {
                 auctionPrice
             )
         );
+        movieRights.createAuction(
+            auctionName,
+            auctionPrice,
+            auctionDuration,
+            rightsDuration
+        );
+    }
+
+    function testAuctionAndRightsDuration() public {
+        //Arrange
+        string memory auctionName = "Duet";
+        uint256 auctionPrice = 100;
+        uint256 auctionDuration = 0;
+        uint256 rightsDuration = 0;
+        //Act / //Assert
+        vm.prank(USER);
+        vm.expectRevert();
         movieRights.createAuction(
             auctionName,
             auctionPrice,
@@ -89,7 +106,7 @@ contract MovieRightsTest is Test {
         uint256 auctionPrice = 100;
         uint256 auctionDuration = 500;
         uint256 rightsDuration = 1500;
-        //Act
+        //Act / //Assert
         vm.prank(USER);
         vm.expectEmit(true, false, false, true, address(movieRights));
         emit MovieRights__auctionCreated(auctionName, auctionPrice);
@@ -99,6 +116,61 @@ contract MovieRightsTest is Test {
             auctionDuration,
             rightsDuration
         );
-        //Assert
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              Bid Auction
+    //////////////////////////////////////////////////////////////*/
+    function testBidErrorforAuctionAmount() public {
+        //Arrange
+        vm.prank(USER);
+        //Act / //Assert
+        vm.expectRevert(
+            MovieRights.MovieRights__AuctionPricecannotBeZero.selector
+        );
+        movieRights.enterBid{value: 0}();
+    }
+
+    function testAuctionAndBidNoValue() public {
+        //Arrange
+        string memory auctionName = "Duet";
+        uint256 auctionPrice = 100;
+        uint256 auctionDuration = 500;
+        uint256 rightsDuration = 1500;
+        //Act
+        vm.prank(USER);
+        movieRights.createAuction(
+            auctionName,
+            auctionPrice,
+            auctionDuration,
+            rightsDuration
+        );
+        vm.prank(USER);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                MovieRights.MovieRights__NotEnoughMoneyforAuction.selector,
+                0
+            )
+        );
+        movieRights.enterBid{value: 0}();
+    }
+
+    function testAuctionandBidInfo() public {
+        //Arrange
+        string memory auctionName = "Duet";
+        uint256 auctionPrice = 100;
+        uint256 auctionDuration = 500;
+        uint256 rightsDuration = 1500;
+        //Act
+        vm.prank(USER);
+        movieRights.createAuction(
+            auctionName,
+            auctionPrice,
+            auctionDuration,
+            rightsDuration
+        );
+        vm.prank(USER);
+        vm.deal(USER, USER_BALANCE);
+        movieRights.enterBid{value: 5 ether}();
     }
 }

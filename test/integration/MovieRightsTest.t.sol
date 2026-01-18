@@ -11,9 +11,16 @@ contract MovieRightsTest is Test {
     MovieRights movieRights;
     address USER = makeAddr("user");
     uint256 constant USER_BALANCE = 1000 ether;
+
     event MovieRights__auctionCreated(
         string indexed movieName,
         uint256 minPrice
+    );
+
+    event MovieRights__PlacedBid(
+        string indexed movieName,
+        address indexed bidder,
+        uint256 amount
     );
 
     function setUp() public {
@@ -24,6 +31,26 @@ contract MovieRightsTest is Test {
     /*//////////////////////////////////////////////////////////////
                               Create Auction
     //////////////////////////////////////////////////////////////*/
+    function testCreateBidName() public {
+        //Arrange
+        string memory auctionName = "Duet";
+        uint256 auctionPrice = 100;
+        uint256 auctionDuration = 500;
+        uint256 rightsDuration = 1500;
+        //Act
+        vm.prank(USER);
+        movieRights.createAuction(
+            auctionName,
+            auctionPrice,
+            auctionDuration,
+            rightsDuration
+        );
+        //Assert
+        assert(
+            keccak256(abi.encode(auctionName)) ==
+                keccak256(abi.encode(movieRights.getAuctionName()))
+        );
+    }
 
     function testAuctionAmountZero() public {
         //Arrange
@@ -171,6 +198,31 @@ contract MovieRightsTest is Test {
         );
         vm.prank(USER);
         vm.deal(USER, USER_BALANCE);
+        movieRights.enterBid{value: 5 ether}();
+        //Assert
+        assert(movieRights.getAuction().bidders.length == 1);
+        assert(movieRights.getHighestAmount() == 5 ether);
+    }
+
+    function testAuctionandBidEvent() public {
+        //Arrange
+        string memory auctionName = "Duet";
+        uint256 auctionPrice = 100;
+        uint256 auctionDuration = 500;
+        uint256 rightsDuration = 1500;
+        //Act / Assert
+        vm.prank(USER);
+        movieRights.createAuction(
+            auctionName,
+            auctionPrice,
+            auctionDuration,
+            rightsDuration
+        );
+
+        vm.deal(USER, USER_BALANCE);
+        vm.expectEmit(true, true, false, true, address(movieRights));
+        vm.prank(USER);
+        emit MovieRights__PlacedBid(auctionName, USER, 5 ether);
         movieRights.enterBid{value: 5 ether}();
     }
 }

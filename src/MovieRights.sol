@@ -21,15 +21,19 @@
 
 //SPDX-License-Identifier:MIT
 
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 
-contract MovieRights {
+contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     /*Errors */
     error MovieRights__NotEnoughMoneyforAuction(uint256 _money);
     error MovieRights__InvalidRightsAmount(uint256);
     error MovieRights__AuctionPricecannotBeZero();
+    error MovieRights__CheckFailed(AuctionStatus, uint256, uint256);
     /* type declarations */
     enum AuctionStatus {
         OPEN,
@@ -42,15 +46,23 @@ contract MovieRights {
         uint256 auctionDuration; // in seconds
         uint256 rightsDuration; // in seconds
         address[] highestBiders;
-        address[] bidders;
+        // address[] bidders;
         uint256 highestBidAmount;
         AuctionStatus auctionStatus;
+        address creator;
     }
 
     /*state variables */
     AuctionDetails private s_auctionDetails;
+    mapping(address => uint256) private s_bidderAmounts;
     address private s_owner;
     AggregatorV3Interface public s_priceFeed;
+    address private s_VRFCoordinator;
+    bytes32 private s_keyHash;
+    uint256 private s_subscriptionId;
+    uint16 constant REQUEST_CONFIRMATION = 3;
+    uint32 private s_callBakLimit;
+    uint32 constant NUM_WORDS = 1;
 
     /*Events */
     event MovieRights__auctionCreated(
@@ -62,10 +74,22 @@ contract MovieRights {
         address indexed bidder,
         uint256 amount
     );
+    event MovieRights__distributorSelected(address indexed winner);
+    event MovieRights__RightsPaymentSuccessful();
 
-    constructor(address _feedAddress) {
+    constructor(
+        address _feedAddress,
+        address _vrfCoordinator,
+        bytes32 _keyHash,
+        uint256 _subId,
+        uint32 _gasLimit
+    ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
         s_owner = msg.sender;
         s_priceFeed = AggregatorV3Interface(_feedAddress);
+        s_VRFCoordinator = _vrfCoordinator;
+        s_keyHash = _keyHash;
+        s_subscriptionId = _subId;
+        s_callBakLimit = _gasLimit;
     }
 
     /*Modifiers */
@@ -104,6 +128,7 @@ contract MovieRights {
         auction.auctionDuration = _auctionDuration;
         auction.rightsDuration = _rightsDuration;
         auction.auctionStatus = AuctionStatus.OPEN;
+        auction.creator = msg.sender;
 
         emit MovieRights__auctionCreated(_name, _minPrice);
     }
@@ -122,8 +147,14 @@ contract MovieRights {
             revert MovieRights__NotEnoughMoneyforAuction(msg.value);
         }
         /*Push Bidder */
-        s_auctionDetails.bidders.push(msg.sender);
-        if (msg.value >= getHighestAmount()) {
+        // s_auctionDetails.bidders.push(msg.sender);
+        s_bidderAmounts[msg.sender] = msg.value;
+        if (msg.value > getHighestAmount()) {
+            s_auctionDetails.highestBidAmount = msg.value;
+            /**resetting higest bidder */
+            s_auctionDetails.highestBiders = new address[](0);
+            s_auctionDetails.highestBiders.push(msg.sender);
+        } else if (msg.value == getHighestAmount()) {
             s_auctionDetails.highestBidAmount = msg.value;
             s_auctionDetails.highestBiders.push(msg.sender);
         }
@@ -132,6 +163,64 @@ contract MovieRights {
             msg.sender,
             msg.value
         );
+    }
+
+    /*VRF functionality to chose distributor */
+    function checkUpkeep(
+        bytes memory /* checkData */
+    )
+        public
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory /* performData */)
+    {
+        bool isAuctionOpen = s_auctionDetails.auctionStatus ==
+            AuctionStatus.OPEN;
+        bool isDuration = s_auctionDetails.auctionDuration > block.timestamp;
+        bool isHighestBider = s_auctionDetails.highestBiders.length > 0;
+        upkeepNeeded = isAuctionOpen && isDuration && isHighestBider;
+        return (upkeepNeeded, "");
+    }
+
+    function performUpkeep(bytes calldata /* performData */) external override {
+        (bool isAuctionOk, ) = checkUpkeep("");
+        if (!isAuctionOk) {
+            revert MovieRights__CheckFailed(
+                s_auctionDetails.auctionStatus,
+                block.timestamp,
+                s_auctionDetails.highestBiders.length
+            );
+        }
+
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
+            .RandomWordsRequest({
+                keyHash: s_keyHash,
+                subId: s_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATION,
+                callbackGasLimit: s_callBakLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+            });
+        s_vrfCoordinator.requestRandomWords(request);
+    }
+
+    function fulfillRandomWords(
+        uint256 /*requestId*/,
+        uint256[] calldata randomWords
+    ) internal override {
+        uint256 noOfBiders = s_auctionDetails.highestBiders.length;
+        uint256 winningNumber = randomWords[0] % noOfBiders;
+        address distributor = s_auctionDetails.highestBiders[winningNumber];
+        emit MovieRights__distributorSelected(distributor);
+        uint256 amountToBeTransferred = s_bidderAmounts[distributor];
+        (bool success, ) = payable(s_auctionDetails.creator).call{
+            value: amountToBeTransferred
+        }("");
+        if (success) {
+            emit MovieRights__RightsPaymentSuccessful();
+        }
     }
 
     /*view & pure functions */

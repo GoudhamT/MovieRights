@@ -1,6 +1,6 @@
 //SPDX-License-Identifier:MIT
 
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {MovieRights} from "src/MovieRights.sol";
@@ -14,7 +14,13 @@ contract DeployMovieRights is Script {
         helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
         vm.startBroadcast();
-        movieRights = new MovieRights(config.priceFeed);
+        movieRights = new MovieRights(
+            config.priceFeed,
+            config.VrfCoordinator,
+            config.keyHash,
+            config.subscriptionId,
+            config.callBackLimit
+        );
         vm.stopBroadcast();
         return movieRights;
     }

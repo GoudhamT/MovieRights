@@ -1,6 +1,6 @@
 //SPDX-License-Identifier:MIT
 
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 import {Test, console} from "forge-std/Test.sol";
 import {MovieRights} from "../../src/MovieRights.sol";
 
@@ -10,7 +10,7 @@ contract MovieRightsTest is Test {
 
     function setUp() public {
         vm.startBroadcast(USER);
-        movieRights = new MovieRights(address(0));
+        movieRights = new MovieRights(address(0), address(0), 0, 0, 0);
         vm.stopBroadcast();
     }
 

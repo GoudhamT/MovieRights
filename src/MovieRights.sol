@@ -46,7 +46,7 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         uint256 auctionDuration; // in seconds
         uint256 rightsDuration; // in seconds
         address[] highestBiders;
-        // address[] bidders;
+        address[] bidders;
         uint256 highestBidAmount;
         AuctionStatus auctionStatus;
         address creator;
@@ -149,6 +149,7 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         /*Push Bidder */
         // s_auctionDetails.bidders.push(msg.sender);
         s_bidderAmounts[msg.sender] = msg.value;
+        s_auctionDetails.bidders.push(msg.sender);
         if (msg.value > getHighestAmount()) {
             s_auctionDetails.highestBidAmount = msg.value;
             /**resetting higest bidder */
@@ -191,7 +192,7 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
                 s_auctionDetails.highestBiders.length
             );
         }
-
+        s_auctionDetails.auctionStatus = AuctionStatus.ASSIGNING;
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
             .RandomWordsRequest({
                 keyHash: s_keyHash,
@@ -221,6 +222,14 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         if (success) {
             emit MovieRights__RightsPaymentSuccessful();
         }
+        s_auctionDetails.auctionStatus = AuctionStatus.CLOSED;
+        s_auctionDetails.highestBidAmount = 0;
+        s_auctionDetails.highestBiders = new address[](0);
+        /*resetting bideers array in auctionDetails */
+        for (uint256 i = 0; i <= s_auctionDetails.bidders.length; i++) {
+            delete s_bidderAmounts[s_auctionDetails.bidders[i]];
+        }
+        s_auctionDetails.bidders = new address[](0);
     }
 
     /*view & pure functions */

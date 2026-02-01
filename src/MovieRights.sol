@@ -40,6 +40,7 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         ASSIGNING,
         CLOSED
     }
+
     struct AuctionDetails {
         string movieName;
         uint256 minPriceInUSD;
@@ -65,25 +66,14 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     uint32 constant NUM_WORDS = 1;
 
     /*Events */
-    event MovieRights__auctionCreated(
-        string indexed movieName,
-        uint256 minPrice
-    );
-    event MovieRights__PlacedBid(
-        string indexed movieName,
-        address indexed bidder,
-        uint256 amount
-    );
+    event MovieRights__auctionCreated(string indexed movieName, uint256 minPrice);
+    event MovieRights__PlacedBid(string indexed movieName, address indexed bidder, uint256 amount);
     event MovieRights__distributorSelected(address indexed winner);
     event MovieRights__RightsPaymentSuccessful();
 
-    constructor(
-        address _feedAddress,
-        address _vrfCoordinator,
-        bytes32 _keyHash,
-        uint256 _subId,
-        uint32 _gasLimit
-    ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
+    constructor(address _feedAddress, address _vrfCoordinator, bytes32 _keyHash, uint256 _subId, uint32 _gasLimit)
+        VRFConsumerBaseV2Plus(_vrfCoordinator)
+    {
         s_owner = msg.sender;
         s_priceFeed = AggregatorV3Interface(_feedAddress);
         s_VRFCoordinator = _vrfCoordinator;
@@ -106,17 +96,14 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     }
 
     function getPrice() internal view returns (uint256) {
-        (, int256 price, , , ) = s_priceFeed.latestRoundData();
+        (, int256 price,,,) = s_priceFeed.latestRoundData();
         return uint256(price);
     }
 
     /*Functions */
-    function createAuction(
-        string memory _name,
-        uint256 _minPrice,
-        uint256 _auctionDuration,
-        uint256 _rightsDuration
-    ) public {
+    function createAuction(string memory _name, uint256 _minPrice, uint256 _auctionDuration, uint256 _rightsDuration)
+        public
+    {
         if (_minPrice <= 0) {
             revert MovieRights__InvalidRightsAmount(_minPrice);
         }
@@ -138,10 +125,7 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
             revert MovieRights__AuctionPricecannotBeZero();
         }
 
-        require(
-            s_auctionDetails.auctionStatus == AuctionStatus.OPEN,
-            "Auction is not Open"
-        );
+        require(s_auctionDetails.auctionStatus == AuctionStatus.OPEN, "Auction is not Open");
 
         if (msg.value < _getMinEthRequired()) {
             revert MovieRights__NotEnoughMoneyforAuction(msg.value);
@@ -152,18 +136,16 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         s_auctionDetails.bidders.push(msg.sender);
         if (msg.value > getHighestAmount()) {
             s_auctionDetails.highestBidAmount = msg.value;
-            /**resetting higest bidder */
+            /**
+             * resetting higest bidder
+             */
             s_auctionDetails.highestBiders = new address[](0);
             s_auctionDetails.highestBiders.push(msg.sender);
         } else if (msg.value == getHighestAmount()) {
             s_auctionDetails.highestBidAmount = msg.value;
             s_auctionDetails.highestBiders.push(msg.sender);
         }
-        emit MovieRights__PlacedBid(
-            s_auctionDetails.movieName,
-            msg.sender,
-            msg.value
-        );
+        emit MovieRights__PlacedBid(s_auctionDetails.movieName, msg.sender, msg.value);
     }
 
     /*VRF functionality to chose distributor */
@@ -173,52 +155,56 @@ contract MovieRights is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
         public
         view
         override
-        returns (bool upkeepNeeded, bytes memory /* performData */)
+        returns (
+            bool upkeepNeeded,
+            bytes memory /* performData */
+        )
     {
-        bool isAuctionOpen = s_auctionDetails.auctionStatus ==
-            AuctionStatus.OPEN;
+        bool isAuctionOpen = s_auctionDetails.auctionStatus == AuctionStatus.OPEN;
         bool isDuration = s_auctionDetails.auctionDuration > block.timestamp;
         bool isHighestBider = s_auctionDetails.highestBiders.length > 0;
         upkeepNeeded = isAuctionOpen && isDuration && isHighestBider;
         return (upkeepNeeded, "");
     }
 
-    function performUpkeep(bytes calldata /* performData */) external override {
-        (bool isAuctionOk, ) = checkUpkeep("");
+    function performUpkeep(
+        bytes calldata /* performData */
+    )
+        external
+        override
+    {
+        (bool isAuctionOk,) = checkUpkeep("");
         if (!isAuctionOk) {
             revert MovieRights__CheckFailed(
-                s_auctionDetails.auctionStatus,
-                block.timestamp,
-                s_auctionDetails.highestBiders.length
+                s_auctionDetails.auctionStatus, block.timestamp, s_auctionDetails.highestBiders.length
             );
         }
         s_auctionDetails.auctionStatus = AuctionStatus.ASSIGNING;
-        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
-            .RandomWordsRequest({
-                keyHash: s_keyHash,
-                subId: s_subscriptionId,
-                requestConfirmations: REQUEST_CONFIRMATION,
-                callbackGasLimit: s_callBakLimit,
-                numWords: NUM_WORDS,
-                extraArgs: VRFV2PlusClient._argsToBytes(
-                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
-                )
-            });
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
+            keyHash: s_keyHash,
+            subId: s_subscriptionId,
+            requestConfirmations: REQUEST_CONFIRMATION,
+            callbackGasLimit: s_callBakLimit,
+            numWords: NUM_WORDS,
+            extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
+        });
         s_vrfCoordinator.requestRandomWords(request);
     }
 
     function fulfillRandomWords(
-        uint256 /*requestId*/,
+        uint256,
+        /*requestId*/
         uint256[] calldata randomWords
-    ) internal override {
+    )
+        internal
+        override
+    {
         uint256 noOfBiders = s_auctionDetails.highestBiders.length;
         uint256 winningNumber = randomWords[0] % noOfBiders;
         address distributor = s_auctionDetails.highestBiders[winningNumber];
         emit MovieRights__distributorSelected(distributor);
         uint256 amountToBeTransferred = s_bidderAmounts[distributor];
-        (bool success, ) = payable(s_auctionDetails.creator).call{
-            value: amountToBeTransferred
-        }("");
+        (bool success,) = payable(s_auctionDetails.creator).call{value: amountToBeTransferred}("");
         if (success) {
             emit MovieRights__RightsPaymentSuccessful();
         }

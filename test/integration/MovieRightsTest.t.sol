@@ -12,16 +12,9 @@ contract MovieRightsTest is Test {
     address USER = makeAddr("user");
     uint256 constant USER_BALANCE = 1000 ether;
 
-    event MovieRights__auctionCreated(
-        string indexed movieName,
-        uint256 minPrice
-    );
+    event MovieRights__auctionCreated(string indexed movieName, uint256 minPrice);
 
-    event MovieRights__PlacedBid(
-        string indexed movieName,
-        address indexed bidder,
-        uint256 amount
-    );
+    event MovieRights__PlacedBid(string indexed movieName, address indexed bidder, uint256 amount);
 
     function setUp() public {
         deployer = new DeployMovieRights();
@@ -39,17 +32,9 @@ contract MovieRightsTest is Test {
         uint256 rightsDuration = 1500;
         //Act
         vm.prank(USER);
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
         //Assert
-        assert(
-            keccak256(abi.encode(auctionName)) ==
-                keccak256(abi.encode(movieRights.getAuctionName()))
-        );
+        assert(keccak256(abi.encode(auctionName)) == keccak256(abi.encode(movieRights.getAuctionName())));
     }
 
     function testAuctionAmountZero() public {
@@ -60,18 +45,8 @@ contract MovieRightsTest is Test {
         uint256 rightsDuration = 1500;
         //Act
         vm.prank(USER);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                MovieRights.MovieRights__InvalidRightsAmount.selector,
-                auctionPrice
-            )
-        );
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        vm.expectRevert(abi.encodeWithSelector(MovieRights.MovieRights__InvalidRightsAmount.selector, auctionPrice));
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
     }
 
     function testAuctionAndRightsDuration() public {
@@ -83,12 +58,7 @@ contract MovieRightsTest is Test {
         //Act / //Assert
         vm.prank(USER);
         vm.expectRevert();
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
     }
 
     function testCreateAuction() public {
@@ -99,12 +69,7 @@ contract MovieRightsTest is Test {
         uint256 rightsDuration = 1500;
         //Act & assert
         vm.prank(USER);
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
     }
 
     function testCreateAuctionCheckStatusOpen() public {
@@ -115,16 +80,9 @@ contract MovieRightsTest is Test {
         uint256 rightsDuration = 1500;
         //Act
         vm.prank(USER);
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
         //Assert
-        assert(
-            movieRights.getAuctionStatus() == MovieRights.AuctionStatus.OPEN
-        );
+        assert(movieRights.getAuctionStatus() == MovieRights.AuctionStatus.OPEN);
     }
 
     function testCreateAuctionCheckEvent() public {
@@ -137,12 +95,7 @@ contract MovieRightsTest is Test {
         vm.prank(USER);
         vm.expectEmit(true, false, false, true, address(movieRights));
         emit MovieRights__auctionCreated(auctionName, auctionPrice);
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -152,9 +105,7 @@ contract MovieRightsTest is Test {
         //Arrange
         vm.prank(USER);
         //Act / //Assert
-        vm.expectRevert(
-            MovieRights.MovieRights__AuctionPricecannotBeZero.selector
-        );
+        vm.expectRevert(MovieRights.MovieRights__AuctionPricecannotBeZero.selector);
         movieRights.enterBid{value: 0}();
     }
 
@@ -166,19 +117,9 @@ contract MovieRightsTest is Test {
         uint256 rightsDuration = 1500;
         //Act
         vm.prank(USER);
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
         vm.prank(USER);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                MovieRights.MovieRights__NotEnoughMoneyforAuction.selector,
-                0
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(MovieRights.MovieRights__NotEnoughMoneyforAuction.selector, 0));
         movieRights.enterBid{value: 0}();
     }
 
@@ -190,12 +131,7 @@ contract MovieRightsTest is Test {
         uint256 rightsDuration = 1500;
         //Act
         vm.prank(USER);
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
         vm.prank(USER);
         vm.deal(USER, USER_BALANCE);
         movieRights.enterBid{value: 5 ether}();
@@ -212,17 +148,82 @@ contract MovieRightsTest is Test {
         uint256 rightsDuration = 1500;
         //Act / Assert
         vm.prank(USER);
-        movieRights.createAuction(
-            auctionName,
-            auctionPrice,
-            auctionDuration,
-            rightsDuration
-        );
+        movieRights.createAuction(auctionName, auctionPrice, auctionDuration, rightsDuration);
 
         vm.deal(USER, USER_BALANCE);
         vm.expectEmit(true, true, false, true, address(movieRights));
         vm.prank(USER);
         emit MovieRights__PlacedBid(auctionName, USER, 5 ether);
         movieRights.enterBid{value: 5 ether}();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              VRF Randomness
+    //////////////////////////////////////////////////////////////*/
+
+    modifier VRFcreateAuction() {
+        string memory movieName = "Sirai";
+        uint256 minPrice = 100;
+        uint256 auctionDuration = 50;
+        uint256 rightsDuration = 2500;
+        vm.prank(USER);
+        movieRights.createAuction(movieName, minPrice, auctionDuration, rightsDuration);
+        _;
+    }
+
+    function testCheckUpKeepTrue() public VRFcreateAuction {
+        //Arrange
+        vm.deal(USER, USER_BALANCE);
+        vm.prank(USER);
+        movieRights.enterBid{value: 5 ether}();
+        //Act
+        (bool upKeep,) = movieRights.checkUpkeep("");
+        //Assert
+        assert(upKeep == true);
+    }
+
+    function testCheckUpKeepFails() public VRFcreateAuction {
+        //Arrange
+        vm.deal(USER, USER_BALANCE);
+        vm.prank(USER);
+        movieRights.enterBid{value: 5 ether}();
+        //Act
+        vm.warp(block.timestamp + 100);
+        vm.roll(block.number + 1);
+        (bool upKeep,) = movieRights.checkUpkeep("");
+        //Assert
+        assert(upKeep == false);
+    }
+
+    function testExpectCheckUpKeepFailed() public VRFcreateAuction {
+        //Arrange
+        vm.deal(USER, USER_BALANCE);
+        vm.prank(USER);
+        movieRights.enterBid{value: 10 ether}();
+        //Act
+        vm.warp(block.timestamp + 100);
+        vm.roll(block.number + 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                MovieRights.MovieRights__CheckFailed.selector,
+                movieRights.getAuctionStatus(),
+                block.timestamp,
+                movieRights.getAuction().highestBiders.length
+            )
+        );
+        //Assert
+        movieRights.performUpkeep("");
+    }
+
+    function testStatusIsAssigning() public VRFcreateAuction {
+        //Arrange
+        vm.deal(USER, USER_BALANCE);
+        vm.prank(USER);
+        movieRights.enterBid{value: 10 ether}();
+        //Act
+        movieRights.performUpkeep("");
+        MovieRights.AuctionStatus rightstatus = movieRights.getAuctionStatus();
+        //Assert
+        assert(rightstatus == MovieRights.AuctionStatus.ASSIGNING);
     }
 }

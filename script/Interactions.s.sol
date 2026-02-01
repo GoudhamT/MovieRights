@@ -17,9 +17,7 @@ contract CreateSubscriptionCode is Script, ConfigConstants {
         return (config.VrfCoordinator, subId);
     }
 
-    function getOrCreateSubscription(
-        address _vrfCoordinator
-    ) public returns (uint256) {
+    function getOrCreateSubscription(address _vrfCoordinator) public returns (uint256) {
         uint256 subId;
         // if (block.chainid == LOCAL_ID) {
         vm.startBroadcast();
@@ -28,4 +26,17 @@ contract CreateSubscriptionCode is Script, ConfigConstants {
         // }
         return subId;
     }
+}
+
+contract FundSubscription is Script, ConfigConstants {
+    function run() public {
+        fundSubscription();
+    }
+
+    function fundSubscription() public {
+        HelperConfig helperConfig = new HelperConfig();
+        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
+        fundingSubscription(config.VrfCoordinator, config.subscriptionId);
+    }
+    function fundingSubscription(address _vrfCoordinator, uint256 _subId) public {}
 }

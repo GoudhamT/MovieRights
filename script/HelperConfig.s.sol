@@ -23,6 +23,7 @@ contract HelperConfig is Script, ConfigConstants {
         bytes32 keyHash;
         uint256 subscriptionId;
         uint32 callBackLimit;
+        address linkToken;
     }
 
     NetworkConfig public localNetworkConfig;
@@ -31,9 +32,7 @@ contract HelperConfig is Script, ConfigConstants {
         return getConfigbyChain(block.chainid);
     }
 
-    function getConfigbyChain(
-        uint256 _chainId
-    ) public returns (NetworkConfig memory) {
+    function getConfigbyChain(uint256 _chainId) public returns (NetworkConfig memory) {
         if (_chainId == SEPOLIA_CHAIN_ID) {
             return getSepoliConfig();
         } else if (_chainId == LOCAL_ID) {
@@ -42,35 +41,28 @@ contract HelperConfig is Script, ConfigConstants {
     }
 
     function getSepoliConfig() public pure returns (NetworkConfig memory) {
-        return
-            NetworkConfig({
-                priceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306,
-                VrfCoordinator: 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE,
-                keyHash: 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71,
-                subscriptionId: 0,
-                callBackLimit: 2e5
-            });
+        return NetworkConfig({
+            priceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306,
+            VrfCoordinator: 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE,
+            keyHash: 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71,
+            subscriptionId: 0,
+            callBackLimit: 2e5,
+            linkToken: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+        });
     }
 
     function getLocalConfig() public returns (NetworkConfig memory) {
         vm.startBroadcast();
-        MockV3Aggregator mockFeed = new MockV3Aggregator(
-            MOCK_DECIMALS,
-            MOCK_ANSWER
-        );
-        VRFCoordinatorV2_5Mock mockVRF = new VRFCoordinatorV2_5Mock(
-            MOCK_BASE_FEE,
-            MOCK_GAS_PRICE,
-            MOCK_WEI_LINK
-        );
+        MockV3Aggregator mockFeed = new MockV3Aggregator(MOCK_DECIMALS, MOCK_ANSWER);
+        VRFCoordinatorV2_5Mock mockVRF = new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE, MOCK_WEI_LINK);
         vm.stopBroadcast();
-        return
-            NetworkConfig({
-                priceFeed: address(mockFeed),
-                VrfCoordinator: address(mockVRF),
-                keyHash: 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71,
-                subscriptionId: 0,
-                callBackLimit: 2e5
-            });
+        return NetworkConfig({
+            priceFeed: address(mockFeed),
+            VrfCoordinator: address(mockVRF),
+            keyHash: 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71,
+            subscriptionId: 0,
+            callBackLimit: 2e5,
+            linkToken: address(0)
+        });
     }
 }
